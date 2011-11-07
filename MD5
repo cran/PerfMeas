@@ -1,0 +1,11 @@
+470f87f0726d947338f0846bd9b14538 *DESCRIPTION
+8b54e5a89fbda3af5e077053d40bec76 *NAMESPACE
+71bfe52c60d232794aff7011ed5e76f9 *R/PerfMeas.R
+2a2e0bee053d61086d7c5659bedb49c8 *inst/doc/PerfMeas.pdf
+463b56d5a3d521f85524035f860e707a *man/AUC.measures.Rd
+9fa5c3b73c9f1e1ed7a8c60cd0574fb1 *man/F.measures.Rd
+c81fd9fa47781112adf3e6a451683130 *man/PXR.Rd
+c7c5e75cab811f9d3213a1067c0c8e99 *man/PerfMeas-package.Rd
+324eb977bda6cd97a15e6721435a5d2f *man/get.all.nodes.by.depth.Rd
+5ea9fceb451d1c4430549abd6f1f8cf5 *man/precision.recall.curves.plot.Rd
+53b24f5ab88de5e1802b8d42ab209075 *src/PerfMeas.c

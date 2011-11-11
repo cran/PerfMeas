@@ -56,3 +56,24 @@ void  prec_recall(double * precision, double * recall, int * order, int * labels
 		recall[i] = 0;	
   } 
 }
+
+/* 
+  trap_rule: Computes the integral according to the trapezoidal rule
+  INPUT:
+  x: pointer to double vector: its values must be in increasing order
+  y: pointer to double vector: its values correspond to f(x)
+  n : pointer to the number of elements of the above vectors
+  value : pointer to the integral value computed by the function
+  OUTPUT
+  precision and recall vectors
+*/
+void  trap_rule(double * x, double * y,  int * n, double * value){
+  register int i;
+  int m = *n;
+  register double integral_value = 0;
+  
+  for (i=1; i<m; i++) 
+    integral_value += ((x[i] - x[i-1]) * (y[i] + y[i-1]) / 2);
+  *value = integral_value;
+}
+    

@@ -85,6 +85,3 @@ AUC.single(scores,labels);
 # AUC for the 10 classes
 AUC.single.over.classes(Targets, Scores);
 }
-
-\keyword{ manip }
-

@@ -407,8 +407,8 @@ precision.at.multiple.recall.level <- function(scores, labels, rec.levels=seq(fr
 
 # Function to compute the precision at multiple levels of recall for multiple classes
 # Input:
-# target : Matrix of the scores  with values in [0,1]. Rows are examples, columns classes
-# predicted : 0/1 matrix  of the true labels:  rows are examples, columns classes.  
+# target : 0/1 matrix  of the true labels:  rows are examples, columns classes.
+# predicted :  matrix of the predicted scores  with values in [0,1]. Rows are examples, columns classes 
 #     S and L must have the same dimension ant the same examples and classes
 # rec.levels: a vector with the desired recall level (def. 0.1 to 1 by 0.1 step)
 # Output: 
@@ -459,16 +459,38 @@ precision.at.all.recall.levels <- function(scores, labels){
   return(list(precision=precision,recall=recall,f.score=f.score));	
 }
 
+# Function to compute multiple AUPRC (Area Under Precision and Recall Curves)
+# Input:
+# z : a list of lists. Each component list is a list returned from precision.at.all.recall.levels
+#     that reports precision, recall and f-score results at different levels for different methods or tasks
+# comp.precision: boolean. It TRUE (default) the AUPRC is computed otherwise the area under the F-score curve is computed
+# Output:
+# a named vector with the AUPRC (or the AUFRC) for different methods or tasks
+AUPRC <- function(z, comp.precision=TRUE) {
+  n <- length(z);
+  curve.names <- names(z);
+  if (is.null(names(curve.names)))
+    curve.names<-as.character(1:n);
+  integral <- numeric(n);
+  names(integral) <- curve.names;
+  for (i in 1:n)  {
+    if (comp.precision)
+      integral[i] <- trap.rule.integral(z[[i]][[2]], z[[i]][[1]])
+    else
+      integral[i] <- trap.rule.integral(z[[i]][[2]], z[[i]][[3]])
+  }
+  return(integral);
+}
 
 
 ############################################################
 ######## 4. Utility functions ##############################
 ############################################################
 
-# Function to plot multiple precision recall curves
+# Function to plot multiple precision recall or f-score recall curves
 # Input:
 # y : a list of lists. Each component list is a list returned from precision.at.all.recall.levels
-#     that reports precision and recall results at different levels for different methods or tasks
+#     that reports precision, recall and f-score results at different levels for different methods or tasks
 # curve.names : names of the compared methods to be reported in the legenda (def: numbers)
 # f : file name. If is given, a postscript file is created, otherwise the output is rendered on
 #                a window.
@@ -480,13 +502,19 @@ precision.at.all.recall.levels <- function(scores, labels){
 # line.type : type of the line. Any valid vector of integer can be assigned (values between 1 
 #             and 6, see lty in par() for details). Values are recycled if length(line.type) < length(y).
 #             Def.: 1 (solid lines).
-precision.recall.curves.plot <- function(y, curve.names=1:length(y),
-       f="", range=seq(from=0, to=1, by=0.1), cex.val=0.6, height=9, width=11,
+precision.recall.curves.plot <- function(y, range=seq(from=0, to=1, by=0.1), 
+       curve.names=1:length(y), cex.val=0.6, f="", height=9, width=11,
 	   col=c("black","red1","blue1","green1","darkgrey","brown1","yellow1","orange1",
 	   "red4","blue4","green4","lightgrey","brown4","yellow4","orange4"),
-	   line.type=1, leg=TRUE, pos=c(range[length(range)-2], y=range[length(range)]))  {
+	   line.type=1, leg=TRUE, pos=c(range[length(range)-2], range[length(range)]), plot.precision=TRUE,
+	   trap.rule=TRUE)  {
   prec <- rec <- range;  
   n <- length(y);
+  x.label<-"Recall";
+  if (plot.precision) 
+    y.label<-"Precision"
+  else
+    y.label<-"F-score";
   len.line.type <- length(line.type);
   mm.line <- as.integer(n/len.line.type); 
   m.line <-   n-(mm.line * len.line.type);            
@@ -509,19 +537,103 @@ precision.recall.curves.plot <- function(y, curve.names=1:length(y),
   
   if (f!="")
     postscript(f, paper="special", height=height, width=width, horizontal=F);
-  plot(prec, rec, type="n", xlab="Recall", ylab="Precision", xaxt="n");
+  plot(prec, rec, type="n",  xlab=x.label, ylab=y.label, xaxt="n");
   axis(side=1, at = range, labels = range);
   
   for (i in 1:n) 
-     lines(y[[i]][[2]], y[[i]][[1]], type="l", lty=str.line[i], col=str.col[i]);
-	 #lines(y[[i]][[2]], y[[i]][[1]], type="l", lty=1, col="black");
-  
+    if (plot.precision)
+      lines(y[[i]][[2]], y[[i]][[1]], type="l", lty=str.line[i], col=str.col[i])
+	else
+	  lines(y[[i]][[2]], y[[i]][[3]], type="l", lty=str.line[i], col=str.col[i]) 
+
   if (leg)  
      legend(x=pos[1], y=pos[2], curve.names, lty=str.line, col=str.col);
      
   if(f!="")
     dev.off(); 
+	
+  if (trap.rule) {
+    integral <- numeric(n);
+	names(integral) <- curve.names;
+    for (i in 1:n)  {
+	  if (plot.precision)
+	    integral[i] <- trap.rule.integral(y[[i]][[2]], y[[i]][[1]])
+	  else
+	    integral[i] <- trap.rule.integral(y[[i]][[2]], y[[i]][[3]])
+    }
+	return(integral);
+  }
 }
+
+
+# Function to plot multiple performance curves
+# It may be used to compute e.g. precision or f-score at given recall levels.
+# Input:
+# m : a numeric matrix. Rows correspond to different methods and columns to precision or f-score at given recall values
+# curve.names : names of the compared methods to be reported in the legenda (def: numbers). 
+# f : file name. If is given, a postscript file is created, otherwise the output is rendered on
+#                a window.
+# cex.val : magnification value for characters (def. 0.6)
+# height : heigth of the graph (def. 9)
+# width : width of the graph (def 11)
+# col : colors of the lines. 14 colors are given as default, but any vector of color from colors() 
+#       can be used. Colors are recycled if length(col) < length(y)
+# line.type : type of the line. Any valid vector of integer can be assigned (values between 1 
+#             and 6, see lty in par() for details). Values are recycled if length(line.type) < length(y).
+#             Def.: 1 (solid lines).
+# patch.type: symbols to be plotted according to the pch parameter (see par in package graphics).
+performance.curves.plot <- function(m, x.range=seq(from=0.1, to=1, by=0.1), y.range=c(0,1),
+       curve.names=1:nrow(m), cex.val=0.6, f="", height=9, width=11,
+	   col=c("black","red1","blue1","green1","darkgrey","brown1","yellow1","orange1",
+	   "red4","blue4","green4","lightgrey","brown4","yellow4","orange4"),
+	   line.type=1, patch.type=1:16, leg=TRUE, pos=c(x.range[length(x.range)-2], y.range[2]),
+	   x.label="Recall", y.label="Precision")  {
+  n <- nrow(m);
+  len.line.type <- length(line.type);
+  mm.line <- as.integer(n/len.line.type); 
+  m.line <-   n-(mm.line * len.line.type);            
+  str.line=integer(0);
+  if (mm.line>0)
+    for (i in 1:mm.line)
+	  str.line <- c(str.line, line.type);
+  if (m.line>0)
+	str.line <- c(str.line, line.type[1:m.line]);
+	
+  len.col <- length(col);
+  mm.col <- as.integer(n/len.col); 
+  m.col <- n-(mm.col * len.col);
+  str.col=character(0);
+  if (mm.col>0)
+    for (i in 1:mm.col)
+	  str.col <- c(str.col, col);
+  if (m.col>0)
+	str.col <- c(str.col, col[1:m.col]);
+	
+  len.patch <- length(patch.type);
+  mm.patch <- as.integer(n/len.patch);
+  m.patch <- n - (mm.patch * len.patch);
+  str.patch=integer(0);
+  if (mm.patch > 0)
+    for (i in 1:mm.patch)
+	  str.patch <- c(str.patch, patch.type);
+  if (m.patch>0)
+	str.patch <- c(str.patch, patch.type[1:m.patch]);    
+  
+  if (f!="")
+    postscript(f, paper="special", height=height, width=width, horizontal=F);
+  plot(x.range, y=seq(from=y.range[1], to=y.range[2], along.with=x.range), type="n", xlab=x.label, ylab=y.label, xaxt="n");
+  axis(side=1, at = x.range, labels = x.range);
+  
+  for (i in 1:n) 
+     lines(x.range, m[i,], type="b", lty=str.line[i], col=str.col[i], pch=str.patch[i]);
+  
+  if (leg)  
+     legend(x=pos[1], y=pos[2], curve.names, lty=str.line, col=str.col, pch=str.patch);
+     
+  if(f!="")
+    dev.off(); 
+}
+
 
 # It groups set of nodes according to their depth in the graph
 # Input:
@@ -539,6 +651,24 @@ get.all.nodes.by.depth <- function(g,  root="00") {
      levels[[i]] <- names(l$distance[l$distance==i])
   return(levels);
 }
+
+
+# Function that implements the trapezoidal rule for integration
+# Input:
+# x : abscissa values in increasing order
+# y : ordinate values
+# Output:
+# value of the integral
+trap.rule.integral <- function (x,y){
+    if (length(x) != length(y))
+	  stop("trap.rule.integral: length of x and y vectors must match");
+	integral_value = 0.0;
+    integral_value <- .C("trap_rule", as.double(x), as.double(y), as.integer(length(x)), 
+             as.double(integral_value), PACKAGE="PerfMeas")[[4]];
+    return (integral_value);
+}
+
+
 
 .onLoad <- function(libname=.libPaths(), pkgname="PerfMeas")
        library.dynam("PerfMeas", pkgname, libname);

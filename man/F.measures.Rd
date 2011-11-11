@@ -94,6 +94,3 @@ F.measure.single(pred,labels);
 # F.score and other metrics for the 10 classes
 F.measure.single.over.classes(Targets, Pred);
 }
-
-\keyword{ manip }
-

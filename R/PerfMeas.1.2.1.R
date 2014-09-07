@@ -1,5 +1,7 @@
 # PerfMeas.R 
 # November 2011
+# Modified july 2012
+# February 2014: Corrected the degenerate case in AUC.single and corrected a bug in precision.at.recall.level
 
 library("graph");
 library("RBGL");
@@ -24,8 +26,8 @@ AUC.single <- function(pred,labels) {
   if (any((labels!=0) & (labels!=1)))
        stop("AUC.single: labels variable must take values 0 or 1");
   if ((all(labels==0)) || (all(labels==1))) # considering the degenerate case where we have labels all equal ...
-    return (1);
-  if (sum(diff(pred)) == 0)  { # if predictions are all equal then gives the ratio of the smaller class
+    return (0);
+  if (sum(abs(diff(pred))) == 0)  { # if predictions are all equal then gives the ratio of the smaller class
     n <- length(pred);
 	return(min(sum(labels==0)/n, sum(labels==1)/n));
   }
@@ -375,10 +377,11 @@ precision.at.recall.level.over.classes <- function(target, predicted, g, rec.lev
 # - a vector with the f.score at different recall levels
 precision.at.multiple.recall.level <- function(scores, labels, rec.levels=seq(from=0.1, to=1, by=0.1)){
   n<-length(scores); 
+  n.levels <- length(rec.levels);
   if (n!=length(labels))
 	stop("precision.at.recall.level: length of labels and scores does not match");
   if(length(which(labels > 0)) == 0)
-	  return(list(res=0,precision=rep(0,n),recall=rep(0,n)));
+	  return(list(precisions=rep(0,n.levels),f.score=rep(0,n.levels)));
   scores.ordered <- order(scores, decreasing=TRUE);	
   precision <- recall <- rep(0, n);
   res <- .C("prec_recall", as.double(precision), as.double(recall), as.integer(scores.ordered), 
@@ -387,7 +390,6 @@ precision.at.multiple.recall.level <- function(scores, labels, rec.levels=seq(fr
   precision <- res[[1]];
   recall <- res[[2]];
   
-  n.levels <- length(rec.levels);
   precisions.at.rec.level <- numeric(n.levels);
   names(precisions.at.rec.level) <- rec.levels;
   for (i in 1:n.levels) {
@@ -506,7 +508,7 @@ precision.recall.curves.plot <- function(y, range=seq(from=0, to=1, by=0.1),
        curve.names=1:length(y), cex.val=0.6, f="", height=9, width=11,
 	   col=c("black","red1","blue1","green1","darkgrey","brown1","yellow1","orange1",
 	   "red4","blue4","green4","lightgrey","brown4","yellow4","orange4"),
-	   line.type=1, leg=TRUE, pos=c(range[length(range)-2], range[length(range)]), plot.precision=TRUE,
+	   line.type=1, leg=TRUE, pos=c(range[length(range)-2], range[length(range)]), do.grid=TRUE, plot.precision=TRUE,
 	   trap.rule=TRUE)  {
   prec <- rec <- range;  
   n <- length(y);
@@ -548,7 +550,10 @@ precision.recall.curves.plot <- function(y, range=seq(from=0, to=1, by=0.1),
 
   if (leg)  
      legend(x=pos[1], y=pos[2], curve.names, lty=str.line, col=str.col);
-     
+  
+  if (do.grid)
+    grid(lwd=1,col="gray");  
+      
   if(f!="")
     dev.off(); 
 	
@@ -586,7 +591,7 @@ performance.curves.plot <- function(m, x.range=seq(from=0.1, to=1, by=0.1), y.ra
        curve.names=1:nrow(m), cex.val=0.6, f="", height=9, width=11,
 	   col=c("black","red1","blue1","green1","darkgrey","brown1","yellow1","orange1",
 	   "red4","blue4","green4","lightgrey","brown4","yellow4","orange4"),
-	   line.type=1, patch.type=1:16, leg=TRUE, pos=c(x.range[length(x.range)-2], y.range[2]),
+	   line.type=1, patch.type=1:16, leg=TRUE, pos=c(x.range[length(x.range)-2], y.range[2]), do.grid=TRUE,
 	   x.label="Recall", y.label="Precision")  {
   n <- nrow(m);
   len.line.type <- length(line.type);
@@ -621,15 +626,17 @@ performance.curves.plot <- function(m, x.range=seq(from=0.1, to=1, by=0.1), y.ra
   
   if (f!="")
     postscript(f, paper="special", height=height, width=width, horizontal=F);
-  plot(x.range, y=seq(from=y.range[1], to=y.range[2], along.with=x.range), type="n", xlab=x.label, ylab=y.label, xaxt="n");
-  axis(side=1, at = x.range, labels = x.range);
+  plot(x.range, y=seq(from=y.range[1], to=y.range[2], along.with=x.range), type="n", xlab=x.label, ylab=y.label, xaxt="n", cex=cex.val, cex.axis=cex.val, cex.lab=cex.val);
+  axis(side=1, at = x.range, labels = x.range, cex.axis=cex.val);
   
   for (i in 1:n) 
-     lines(x.range, m[i,], type="b", lty=str.line[i], col=str.col[i], pch=str.patch[i]);
+     lines(x.range, m[i,], type="b", lty=str.line[i], col=str.col[i], pch=str.patch[i], cex=cex.val);
   
   if (leg)  
-     legend(x=pos[1], y=pos[2], curve.names, lty=str.line, col=str.col, pch=str.patch);
-     
+     legend(x=pos[1], y=pos[2], curve.names, lty=str.line, col=str.col, pch=str.patch, cex=cex.val);
+  
+  if (do.grid)
+    grid(lwd=1,col="gray");  
   if(f!="")
     dev.off(); 
 }
@@ -674,4 +681,4 @@ trap.rule.integral <- function (x,y){
        library.dynam("PerfMeas", pkgname, libname);
 	   
 .onAttach <- function(libname=.libPaths(), pkgname="PerfMeas")
-              cat("PerfMeas: Performance Measures for ranking and classification tasks.\n");
+               packageStartupMessage("PerfMeas: Performance Measures for ranking and classification tasks.\n")

@@ -12,8 +12,8 @@ Metrics for ranking and classification tasks: Area Under the ROC Curve (AUC), F-
 \tabular{ll}{
 Package: \tab PerfMeas\cr
 Type: \tab Package\cr
-Version: \tab 1.0\cr
-Date: \tab 2011-11-07\cr
+Version: \tab 1.2.1\cr
+Date: \tab 2014-09-07\cr
 License: \tab GPL (>= 2) \cr
 LazyLoad: \tab yes\cr
 }
@@ -24,11 +24,11 @@ Functions to compute the above measures for single classes or for sets of classe
 \author{
 \emph{Giorgio Valentini} and \emph{Matteo Re}
 
-DSI, Dipartimento di Scienze dell'Informazione
+DI, Dipartimento di Informatica
 
 Universita' degli Studi di Milano
 
-\email{\{valentini,re\}@dsi.unimi.it}
+\email{\{valentini,re\}@di.unimi.it}
 
 Maintainer: 
 \emph{Giorgio Valentini} 

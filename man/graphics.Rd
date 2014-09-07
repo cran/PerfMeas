@@ -13,14 +13,14 @@ precision.recall.curves.plot(y, range=seq(from=0, to=1, by=0.1),
 curve.names=1:length(y), cex.val=0.6, f="", height=9, width=11,
 col=c("black","red1","blue1","green1","darkgrey","brown1","yellow1","orange1",
 "red4","blue4","green4","lightgrey","brown4","yellow4","orange4"),
-line.type=1, leg=TRUE, pos=c(range[length(range)-2], range[length(range)]), 
+line.type=1, leg=TRUE, pos=c(range[length(range)-2], range[length(range)]), do.grid=TRUE,
 plot.precision=TRUE, trap.rule=TRUE)
 
 performance.curves.plot(m, x.range=seq(from=0.1, to=1, by=0.1), 
 y.range=c(0,1), curve.names=1:nrow(m), cex.val=0.6, f="", height=9, width=11,
 col=c("black","red1","blue1","green1","darkgrey","brown1","yellow1","orange1",
 "red4","blue4","green4","lightgrey","brown4","yellow4","orange4"), line.type=1, 
-patch.type=1:16, leg=TRUE, pos=c(x.range[length(x.range)-2], y.range[2]), 
+patch.type=1:16, leg=TRUE, pos=c(x.range[length(x.range)-2], y.range[2]), do.grid=TRUE,
 x.label="Recall", y.label="Precision")
 }
 
@@ -63,6 +63,7 @@ type of the line. Any valid vector of integer can be assigned (values between 1 
 \item{x.range}{vector of the recall values to be represented}
 \item{y.range}{vector with 2 elements: range of the precision/f-score to be represented }
 \item{patch.type}{ numeric vector corresponding to the symbols to be plotted for different recall values (def. 1:16)}
+\item{do.grid}{a bollen value indicating whether a grid will be plotted or not (def: TRUE)}
 \item{x.label}{label of the abscissa (def: Recall)}
 \item{y.label}{label of the ordinate (def: Precision)}
 }

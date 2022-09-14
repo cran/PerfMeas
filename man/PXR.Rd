@@ -20,7 +20,7 @@ precision.at.multiple.recall.level(scores, labels,
            rec.levels = seq(from = 0.1, to = 1, by = 0.1))
 precision.at.multiple.recall.level.over.classes(target, 
    predicted, rec.levels = seq(from = 0.1, to = 1, by = 0.1))
-precision.at.all.recall.levels(scores, labels)
+precision.at.all.recall.levels(scores, labels, resolution=1)
 }
 
 \arguments{
@@ -49,6 +49,9 @@ the name of the root node (def. "00") of the graph g.
   \item{rec.levels}{
 a vector with the desired recall levels (def. 0.1 to 1 by 0.1 step)
 }
+ \item{resolution}{
+a number between 0 and 1 (def. 1). This represents the fraction of precision, recall and f-score values returned. 
+}
 
 }
 \details{
@@ -61,8 +64,8 @@ a vector with the desired recall levels (def. 0.1 to 1 by 0.1 step)
 \code{precision.at.multiple.recall.level.over.classes} computes the precision at multiple levels of recall for multiple classes.
 
 \code{precision.at.all.recall.levels} compute the precision at all recall levels  for a single class.
-It returns a pair of precision and recall values by moving a threshold from the lowest to the highest score: a number of precision and recall values equal to the number of available examples is returned.
-
+It returns a pair of precision and recall values by moving a threshold from the lowest to the highest score: a number of precision and recall values equal to the number n of available examples is returned
+if resolution=1, otherwise a number of values equal to n * resolution.
 }
 \value{
 \code{precision.at.recall.level} returns the precision at the requested recall

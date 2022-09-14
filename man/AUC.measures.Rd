@@ -2,6 +2,8 @@
 \alias{AUC.measures}
 \alias{AUC.single}
 \alias{AUC.single.over.classes}
+\alias{AUC.n.single}
+\alias{AUC.n.single.over.classes}
 \alias{compute.mean.AUC.single.over.classes}
 \title{
 AUC measures
@@ -12,6 +14,8 @@ Set of functions to compute the Area Under the ROC Curve (AUC)
 \usage{
 AUC.single(pred, labels)
 AUC.single.over.classes(target, predicted, g, root = "00")
+AUC.n.single(pred, labels, n=50)
+AUC.n.single.over.classes(target, predicted, g, n=50, root = "00")
 compute.mean.AUC.single.over.classes(y)
 }
 
@@ -31,6 +35,9 @@ compute.mean.AUC.single.over.classes(y)
 	\item{g}{
   a graph of class \emph{graphNEL} (package \pkg{graph}) of the classes. If g is missing no per.level results are computed
   }
+  	\item{n}{
+  number of negatives (def=50)
+  }
 	\item{root}{
   the name of the root node (def. "00")
   }
@@ -46,7 +53,15 @@ compute.mean.AUC.single.over.classes(y)
   the average values across the levels of the hierarchy (if any); level 1 classes are at distance 1 from the root,
   level 2 the second level, till to last level correponding to the leaves. Note that if the argument g is missing no   per-level values are computed.
   
+  \code{AUC.n.single} computes the AUCn for a single class, i.e. the AUC by considering only the first n top ranked negatives, where n is the absolute
+  number of negative examples receiving the highest scores.
+  
+   \code{AUC.n.single.over.classes} computes AUCn for a set of classes, including their average values across classes and
+  the average values across the levels of the hierarchy (if any); level 1 classes are at distance 1 from the root,
+  level 2 the second level, till to last level correponding to the leaves. Note that if the argument g is missing no   per-level values are computed.
+  
   \code{compute.mean.AUC.single.over.classes} compute means across folds of AUC.single.over.classes. It can be used to automatically computed average values (for each class, level, or average across classes) across folds.
+  
 }
 \value{
   \code{AUC.single} returns a numeric value corresponding to the AUC.
@@ -55,6 +70,13 @@ compute.mean.AUC.single.over.classes(y)
 	\item{- average }{the average AUC across classes}
 	\item{- per.level}{a named vector with average  AUC for each level of the hierarchy; names correspond to levels}
 	\item{- per.class }{a named vector with AUC for each class; names correspond to classes}
+	
+  \code{AUC.n.single} returns a numeric value corresponding to the AUCn.
+  
+  \code{AUC.n.single.over.classes} returns  a list with three elements:
+	\item{- average }{the average AUCn across classes}
+	\item{- per.level}{a named vector with average  AUCn for each level of the hierarchy; names correspond to levels}
+	\item{- per.class }{a named vector with AUCn for each class; names correspond to classes}
 	
   \code{compute.mean.AUC.single.over.classes} returns a list obtained by averaging the results across folds of the input y. 
      The components are:
@@ -84,4 +106,8 @@ labels <- Targets[,"A"];
 AUC.single(scores,labels);
 # AUC for the 10 classes
 AUC.single.over.classes(Targets, Scores);
+# AUCn for a single class considering only the first top scored negatives
+AUC.n.single(scores,labels, n=20);
+# AUCn for the 10 classes considering only the first top scored negatives
+AUC.n.single.over.classes(Targets, Scores, n=20);
 }

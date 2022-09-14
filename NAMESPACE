@@ -1,2 +1,5 @@
 exportPattern("^[[:alpha:]]+")
 import(limma, graph, RBGL)
+importFrom("grDevices", "dev.off", "postscript")
+importFrom("graphics", "axis", "grid", "legend", "lines")
+

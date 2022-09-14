@@ -2,6 +2,9 @@
 # November 2011
 # Modified july 2012
 # February 2014: Corrected the degenerate case in AUC.single and corrected a bug in precision.at.recall.level
+# January 2015: Corrected AUC.single
+# August 2015: Corrected precision.at.all.recall.levels
+# September 2015. Added AUCn
 
 library("graph");
 library("RBGL");
@@ -26,13 +29,57 @@ AUC.single <- function(pred,labels) {
   if (any((labels!=0) & (labels!=1)))
        stop("AUC.single: labels variable must take values 0 or 1");
   if ((all(labels==0)) || (all(labels==1))) # considering the degenerate case where we have labels all equal ...
-    return (0);
-  if (sum(abs(diff(pred))) == 0)  { # if predictions are all equal then gives the ratio of the smaller class
-    n <- length(pred);
-	return(min(sum(labels==0)/n, sum(labels==1)/n));
-  }
+    return (1);
+  if (sum(abs(diff(pred))) == 0)
+    return(0.5);
+  # removed the special case with predictions all equal since auROC now can manage this ...
   return (auROC(labels, pred));
 }
+
+
+# Function to compute the AUCn for a single class
+# AUCn is the the AUC computed considering the top ranked n negatives.
+# Input
+# pred : numeric vector of  the values  of the predicted labels
+# labels : vector of the true labels (0 negative, 1 positive examples)
+# n : number of negatives (def=50)
+# Output:
+# a numeric value corresponding to the AUCn
+AUC.n.single <- function(pred, labels, n=50) {
+  
+  if (length(pred)!=length(labels))
+         stop("AUC.n.single: lengths of true and predicted labels do not match.");
+  if (any((labels!=0) & (labels!=1)))
+       stop("AUC.n.single: labels variable must take values 0 or 1");
+  if ((all(labels==0)) || (all(labels==1))) # considering the degenerate case where we have labels all equal ...
+    return (1);
+	
+  ind.ordered <- order(pred, decreasing=TRUE);
+  pred <- pred[ind.ordered];
+  labels <- labels[ind.ordered];
+  
+  #browser();
+  tot.neg <- length(labels) - sum(labels);
+  if (tot.neg < n)
+    n <- tot.neg;
+  n.neg <- 0;
+  i=0;
+  while (n.neg < n) {
+    i <- i + 1;
+    n.neg <- n.neg + as.numeric(!labels[i]); 
+  }
+  pred <- pred[1:i];
+  labels <- labels[1:i];
+  if (all(labels==0))
+    return(0);
+  if (all(labels==1))
+    return(1);
+  if (sum(abs(diff(pred))) == 0)
+    return(0.5);
+  # removed the special case with predictions all equal since auROC now can manage this ...
+  return (auROC(labels, pred));
+}
+
 
 
 
@@ -88,6 +135,65 @@ AUC.single.over.classes <- function(target, predicted, g, root="00") {
        	   
        return(list(average=average, per.level=per.level, per.class=per.class));
 }
+
+
+
+
+# Function that computes AUCn for each class
+# Both the target e predicted matrices have a number of rows equal to the number of examples
+# and a number of columns equal to the number of the classes.
+# Input:
+# target : matrix with the target multilabels
+# predicted : a numeric matrix with predicted values
+# g : a tree of the multilabels. If g is missing no per.level results are computed
+# n : number of negatives (def=50)
+# root : the name of the root node (def. "00")
+# Output :
+# a list with three elements:
+# average :  the average AUC across classes.              
+# per.level : a named vector with average  AUC for each level of the hierarchy.
+#                       names correspond to levels
+# per.class : a named vector with AUC for each class.
+#                       Names correspond to classes
+AUC.n.single.over.classes <- function(target, predicted, g, n=50, root="00") { 
+       n.examples <- nrow(target);
+       n.classes <- ncol(target);
+       if ((n.examples!=nrow(predicted)) || (n.classes!=ncol(predicted)))
+          stop ("AUC.n.single.over.classes: number of rows or columns do not match between target and predicted classes");
+       
+       class.names <- colnames(target);
+       n.classes <- length(class.names);
+       
+       # per class AUC
+       per.class <- numeric(n.classes);
+       names(per.class) <- class.names;
+       
+       for (i in 1:n.classes) {
+         pred.labels <- predicted[,i];
+	     true.labels <- target[,i];
+         per.class[i] <- AUC.n.single(pred.labels,true.labels, n=n);       
+       }
+       
+       # average over classes precision recall specificity F accuracy
+       average <- mean(per.class);
+       
+	   if (!missing(g)) {
+    	 # average per level AUC
+    	 levels <- get.all.nodes.by.depth(g,  root=root);
+    	 n.levels <- length(levels);
+    	 level.names <- 1:n.levels;
+    	 per.level <- numeric(n.levels);
+    	 names(per.level) <-  level.names;    
+    	 for (i in 1:n.levels)  {
+           per.level[i] <- mean(per.class[levels[[i]]]);
+    	 }
+	   } else
+	     return(list(average=average, per.level=NULL, per.class=per.class));
+       	   
+       return(list(average=average, per.level=per.level, per.class=per.class));
+}
+
+
 
 
 
@@ -165,11 +271,11 @@ F.measure.single <- function(pred,labels) {
    else
      specificity <- TN/(TN+FP);
    if ((precision+recall) == 0)
-      F <- 0
+      Fscore <- 0
    else
-      F = 2 *(precision*recall) / (precision+recall); 
+      Fscore = 2 *(precision*recall) / (precision+recall); 
 
-   res <- c(precision,recall,specificity,F,acc, npos);
+   res <- c(precision,recall,specificity,Fscore,acc, npos);
    names(res) <- c("P", "R", "S", "F", "A", "Pos.");
    return (res);
 }
@@ -437,12 +543,13 @@ precision.at.multiple.recall.level.over.classes <- function(target, predicted, r
 # Input:
 # scores : vector of the predicted scores in [0,1]
 # labels : 0/1 vector of the true labels 
+# resolution : a number between 0 and 1 (def. 1). This represents the fraction of precision, recall and f-score returned.
 # Output: 
 # a list with 3 elements:
 # precision : precision at different thresholds
 # recall : recall at different thresholds
 # f.score : f.score at different thresholds
-precision.at.all.recall.levels <- function(scores, labels){
+precision.at.all.recall.levels <- function(scores, labels, resolution=1){
   n<-length(scores); 
   if (n!=length(labels))
 	stop("precision.at.recall.level: length of labels and scores does not match");
@@ -455,10 +562,25 @@ precision.at.all.recall.levels <- function(scores, labels){
   
   precision <- res[[1]];
   recall <- res[[2]];
+  if (resolution < 1) {
+     newn <- n * resolution;
+	 interval <- round(n/newn);
+	 x <- seq(from=1, to=n, by=interval);
+	 newprec <- newrec <- numeric(length(x));	
+	 j=1; 
+	 for (i in x) {
+	   newprec[j] <- precision[i];
+	   newrec[j] <- recall[i];
+	   j <- j + 1;	 
+	 }  
+  } else {
+    newprec <- precision;
+    newrec <- recall;
+  }
   
-  f.score <- (2 * precision * recall)/(precision + recall);
+  f.score <- (2 * newprec * newrec)/(newprec + newrec);
   f.score[is.nan(f.score)] <- 0;
-  return(list(precision=precision,recall=recall,f.score=f.score));	
+  return(list(precision=newprec,recall=newrec,f.score=f.score));	
 }
 
 # Function to compute multiple AUPRC (Area Under Precision and Recall Curves)
